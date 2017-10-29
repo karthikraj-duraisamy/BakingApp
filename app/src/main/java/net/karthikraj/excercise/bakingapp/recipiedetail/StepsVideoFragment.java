@@ -140,7 +140,9 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        outState.putLong(RESUME_POSITION, stepPlayer.getCurrentPosition());
+        if(stepPlayer != null) {
+            outState.putLong(RESUME_POSITION, stepPlayer.getCurrentPosition());
+        }
         super.onSaveInstanceState(outState);
     }
 

@@ -19,6 +19,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -89,6 +90,7 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     private int num_steps;
     private static final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
 
+    private static final String RESUME_POSITION = "resume_position";
     private Step step;
 
 
@@ -115,7 +117,6 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        checkOrientation();
         context = getContext();
         if(getArguments() != null){
             step = getArguments().getParcelable(STEP_PARCELABLE);
@@ -129,31 +130,34 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_steps_video, container, false);
         ButterKnife.bind(this,rootView);
+        if (savedInstanceState != null) {
+            resumePosition = savedInstanceState.getLong(RESUME_POSITION, C.TIME_UNSET);
+        }
         loadData();
+        checkOrientation();
         return rootView;
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putLong(RESUME_POSITION, stepPlayer.getCurrentPosition());
+        super.onSaveInstanceState(outState);
+    }
 
     @Override
     public void onStart() {
         super.onStart();
-        if (Util.SDK_INT > 23) {
-            startPlayer(step.getVideoURL());
-        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if ((Util.SDK_INT <= 23 || stepPlayer == null)) {
-            startPlayer(step.getVideoURL());
-        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (Util.SDK_INT <= 23) {
+        if (Util.SDK_INT > 23) {
             releasePlayer();
         }
     }
@@ -168,8 +172,6 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
 
 
     private void loadData(){
-        resumePosition = -1;
-        hasResume = false;
         userAgent = Util.getUserAgent(context,"BakingApp");
         refresh_btn.setOnClickListener(this);
         autoPlay = true;
@@ -182,6 +184,7 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
         if(descrition_textview != null){
             descrition_textview.setText(step.getDescription());
         }
+        startPlayer(step.getVideoURL());
 
     }
 
@@ -279,10 +282,8 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
         Uri uri = Uri.parse(video_url);
         MediaSource mediaSource = new ExtractorMediaSource(uri, mediaDataSourceFactory, new DefaultExtractorsFactory(),
                 mainHandler, null);
-
-        if(hasResume){
-            stepPlayer.seekTo(resumePosition);
-        }
+        if(resumePosition != C.TIME_UNSET)
+        stepPlayer.seekTo(resumePosition);
         stepPlayer.prepare(mediaSource);
 
     }
@@ -295,10 +296,10 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
             stepPlayer.release();
             stepPlayer = null;
             trackSelector = null;
-
-
         }
     }
+
+
 
     private void updateResumePosition(){
         hasResume = true;

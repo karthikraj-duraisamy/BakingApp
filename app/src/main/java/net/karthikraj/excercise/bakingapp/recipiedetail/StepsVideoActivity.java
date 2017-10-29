@@ -46,10 +46,12 @@ public class StepsVideoActivity extends AppCompatActivity implements StepsVideoF
         getSupportActionBar().setTitle(mRecipe.getName());
 
         fragmentManager = getSupportFragmentManager();
-        StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(stepExtra, numOfSteps);
-        fragmentManager.beginTransaction()
-                .add(R.id.video_fragment_container,stepFrag)
-                .commit();
+        if(savedInstanceState == null) {
+            StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(stepExtra, numOfSteps);
+            fragmentManager.beginTransaction()
+                    .add(R.id.video_fragment_container, stepFrag)
+                    .commit();
+        }
     }
 
     @Override
@@ -67,7 +69,6 @@ public class StepsVideoActivity extends AppCompatActivity implements StepsVideoF
             StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(nextStep,num_steps);
             fragmentManager.beginTransaction()
                     .replace(R.id.video_fragment_container,stepFrag)
-                    .addToBackStack(null)
                     .commit();
         }else{
             StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(nextStep,num_steps);
@@ -84,7 +85,6 @@ public class StepsVideoActivity extends AppCompatActivity implements StepsVideoF
             StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(previousStep, num_steps);
             fragmentManager.beginTransaction()
                     .replace(R.id.video_fragment_container, stepFrag)
-                    .addToBackStack(null)
                     .commit();
         }else{
             StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(previousStep, num_steps);

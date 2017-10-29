@@ -2,11 +2,15 @@
 
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/colorPrimary">
 
     <com.google.android.exoplayer2.ui.SimpleExoPlayerView
         android:id="@+id/exoplayer"
         android:layout_width="match_parent"
+        app:resize_mode="fill"
         android:layout_height="match_parent" />
 
     <ImageView
@@ -19,7 +23,7 @@
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:layout_gravity="center"
-        android:src="@drawable/ic_play"
+        app:srcCompat="@drawable/ic_play"
         android:visibility="gone" />
 
     <ProgressBar
@@ -34,7 +38,7 @@
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:layout_gravity="center"
-        android:src="@drawable/ic_refresh"
+        app:srcCompat="@drawable/ic_refresh"
         android:visibility="gone" />
 
     <ImageView
@@ -42,7 +46,7 @@
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:layout_gravity="center"
-        android:src="@drawable/ic_video_off"
+        app:srcCompat="@drawable/ic_video_off"
         android:visibility="gone" />
 
 </FrameLayout>

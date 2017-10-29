@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="recipe_card_height">150dp</dimen>
+    <dimen name="recipe_card_layout_margin">5dp</dimen>
+    <dimen name="card_view_radious">2dp</dimen>
+    <dimen name="card_view_elevation">2dp</dimen>
+    <dimen name="cardview_max_elevation">8dp</dimen>
+    <dimen name="app_bar_layout_height">56dp</dimen>
+    <dimen name="error_msg_textsize">16sp</dimen>
+    <dimen name="sixteen_dp_padding">16dp</dimen>
+    <dimen name="widget_marging">16dp</dimen>
+</resources>

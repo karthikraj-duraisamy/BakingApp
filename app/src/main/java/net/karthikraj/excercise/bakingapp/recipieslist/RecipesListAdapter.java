@@ -1,7 +1,9 @@
 package net.karthikraj.excercise.bakingapp.recipieslist;
 
+import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -15,6 +17,7 @@ import com.squareup.picasso.Picasso;
 import net.karthikraj.excercise.bakingapp.R;
 import net.karthikraj.excercise.bakingapp.model.RecipeModel;
 import net.karthikraj.excercise.bakingapp.recipiedetail.RecipieDetailsActivity;
+import net.karthikraj.excercise.bakingapp.widgets.BakingWidget;
 
 import java.util.List;
 
@@ -96,6 +99,18 @@ public class RecipesListAdapter extends RecyclerView.Adapter<RecipesListAdapter.
             recipeDetialsActivityIntent.putExtra(RECIPE_TAG,recipe.getId());
             recipeDetialsActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             mContext.startActivity(recipeDetialsActivityIntent);
+
+            SharedPreferences sharedPreferences = mContext.getSharedPreferences("BackingAppPrefs", 0);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putInt("selected_recipe", recipe.getId());
+            editor.apply();
+
+            Intent intent = new Intent(mContext, BakingWidget.class);
+            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids = {R.layout.widget_layout};
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS,ids);
+            mContext.sendBroadcast(intent);
+
         }
     }
 

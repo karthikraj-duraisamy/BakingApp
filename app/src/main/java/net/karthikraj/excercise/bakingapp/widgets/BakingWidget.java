@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.widget.RemoteViews;
 
 import net.karthikraj.excercise.bakingapp.R;
@@ -13,7 +14,6 @@ import net.karthikraj.excercise.bakingapp.model.RecipeModel;
 import net.karthikraj.excercise.bakingapp.recipieslist.MainActivity;
 
 import java.util.List;
-import java.util.Random;
 
 /**
  * Created by karthik on 29/10/17.
@@ -27,17 +27,18 @@ public class BakingWidget extends AppWidgetProvider {
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
 
-        Random r = new Random();
-        int recipe_id = r.nextInt(3);
+
+        SharedPreferences sharedPreferences = context.getSharedPreferences("BackingAppPrefs", 0);
+        int recipe_id = sharedPreferences.getInt("selected_recipe", 0);
 
         Intent it = new Intent(context, MainActivity.class);
         it.setAction(WIDGET_ACTION);
-        it.putExtra(WIDGET_RECIPE,recipe_id+1);
+        it.putExtra(WIDGET_RECIPE,recipe_id);
         PendingIntent pendingIntent = PendingIntent.getActivity(context,0,it,PendingIntent.FLAG_UPDATE_CURRENT);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
         views.setOnClickPendingIntent(R.id.widget_layout,pendingIntent);
 
-        RecipeModel recipe = MainActivity.getRecipe(recipe_id+1);
+        RecipeModel recipe = MainActivity.getRecipe(recipe_id);
 
         if(recipe != null){
             views.setTextViewText(R.id.recipe_name,recipe.getName());

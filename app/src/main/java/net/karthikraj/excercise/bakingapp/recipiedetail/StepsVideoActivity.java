@@ -49,7 +49,6 @@ public class StepsVideoActivity extends AppCompatActivity implements StepsVideoF
         StepsVideoFragment stepFrag = StepsVideoFragment.newInstance(stepExtra, numOfSteps);
         fragmentManager.beginTransaction()
                 .add(R.id.video_fragment_container,stepFrag)
-                .addToBackStack(null)
                 .commit();
     }
 

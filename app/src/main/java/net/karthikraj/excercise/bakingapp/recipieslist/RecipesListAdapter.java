@@ -7,7 +7,10 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import net.karthikraj.excercise.bakingapp.R;
 import net.karthikraj.excercise.bakingapp.model.RecipeModel;
@@ -63,6 +66,8 @@ public class RecipesListAdapter extends RecyclerView.Adapter<RecipesListAdapter.
         @BindView(R.id.tv_recipie_name)
         TextView recipeNameText;
         @BindView(R.id.tv_recipie_servings) TextView recipeServingsText;
+        @BindView(R.id.recipe_image)
+        ImageView imageViewRecipe;
         @BindView(R.id.cardView)
         CardView recipeView;
         private RecipeModel recipe;
@@ -78,6 +83,11 @@ public class RecipesListAdapter extends RecyclerView.Adapter<RecipesListAdapter.
             recipeNameText.setText(recipe.getName());
             String nServings = recipe.getServings() + " " + mContext.getString(R.string.recipie_servings_string);
             recipeServingsText.setText(nServings);
+
+            if(recipe.getImage().length() > 0) {
+                imageViewRecipe.setVisibility(View.VISIBLE);
+                Picasso.with(mContext).load(recipe.getImage()).into(imageViewRecipe);
+            }
         }
 
         @Override

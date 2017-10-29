@@ -38,6 +38,13 @@
                 tools:layout_editor_absoluteX="185dp"
                 tools:layout_editor_absoluteY="12dp"
                 tools:text="Butter Cake" />
+            <ImageView
+                android:id="@+id/recipe_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="invisible"
+                app:srcCompat="@mipmap/ic_launcher_round" />
+
 
             <RelativeLayout
                 android:id="@+id/relativeLayout"

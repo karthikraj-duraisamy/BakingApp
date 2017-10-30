@@ -19,7 +19,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -33,10 +33,7 @@ import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.TrackGroupArray;
-import com.google.android.exoplayer2.source.hls.BuildConfig;
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
@@ -59,6 +56,8 @@ import butterknife.ButterKnife;
 public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListener, ImageView.OnClickListener{
 
     private static final String TAG = StepsVideoFragment.class.getSimpleName();
+
+    private static final String RESUME_POSITION = "resume_position";
 
     @BindView(R.id.exoplayer)
     SimpleExoPlayerView stepPlayerView;
@@ -83,16 +82,15 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     private Context context;
     private DataSource.Factory mediaDataSourceFactory;
     private DefaultTrackSelector trackSelector;
-    private boolean autoPlay;
-    private boolean hasResume;
-    private long resumePosition;
     private String userAgent;
     private int num_steps;
     private static final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
 
-    private static final String RESUME_POSITION = "resume_position";
     private Step step;
 
+    private boolean playWhenReady;
+    private int currentWindow;
+    private long playbackPosition;
 
     StepChangeListener stepChangeListener;
 
@@ -125,41 +123,47 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     }
 
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        if(stepPlayer != null) {
+            outState.putLong(RESUME_POSITION, playbackPosition);
+        }
+        super.onSaveInstanceState(outState);
+    }
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_steps_video, container, false);
         ButterKnife.bind(this,rootView);
-        if (savedInstanceState != null) {
-            resumePosition = savedInstanceState.getLong(RESUME_POSITION, C.TIME_UNSET);
-        }
-        loadData();
+        setRetainInstance(true);
         checkOrientation();
         return rootView;
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        if(stepPlayer != null) {
-            outState.putLong(RESUME_POSITION, stepPlayer.getCurrentPosition());
-        }
-        super.onSaveInstanceState(outState);
-    }
 
     @Override
     public void onStart() {
         super.onStart();
+        if (Util.SDK_INT > 23) {
+            loadData();
+        }
     }
+
+
 
     @Override
     public void onResume() {
         super.onResume();
+        if ((Util.SDK_INT <= 23 || stepPlayer == null)) {
+            loadData();
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (Util.SDK_INT > 23) {
+        if (Util.SDK_INT <= 23) {
             releasePlayer();
         }
     }
@@ -173,10 +177,11 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     }
 
 
+
     private void loadData(){
         userAgent = Util.getUserAgent(context,"BakingApp");
         refresh_btn.setOnClickListener(this);
-        autoPlay = true;
+        playWhenReady = true;
         mediaDataSourceFactory = new DefaultDataSourceFactory(context,BANDWIDTH_METER,
                 new DefaultHttpDataSourceFactory(userAgent,BANDWIDTH_METER));
         mainHandler = new Handler();
@@ -186,7 +191,7 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
         if(descrition_textview != null){
             descrition_textview.setText(step.getDescription());
         }
-        startPlayer(step.getVideoURL());
+        startPlayer();
 
     }
 
@@ -228,7 +233,7 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
     }
 
 
-    private void startPlayer(final String video_url){
+    private void startPlayer(){
 
         if (!step.getThumbnailURL().isEmpty()) {
             Picasso.Builder builder = new Picasso.Builder(getContext());
@@ -237,7 +242,7 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
                 @Override
                 public void onImageLoadFailed(Picasso picasso, Uri uri, Exception exception)
                 {
-                    initializeVideoPlayer(video_url);
+                    initializePlayer();
                     play_btn.setVisibility(View.GONE);
                 }
 
@@ -248,69 +253,59 @@ public class StepsVideoFragment extends Fragment implements ExoPlayer.EventListe
                 @Override
                 public void onClick(View v) {
                     play_btn.setVisibility(View.GONE);
-                    initializeVideoPlayer(video_url);
+                    initializePlayer();
                 }
             });
         }else {
             video_thumbnail.setVisibility(View.GONE);
-            initializeVideoPlayer(video_url);
+            initializePlayer();
         }
     }
 
+    private void initializePlayer() {
 
-    private void initializeVideoPlayer(String video_url){
-
-
-        if(stepPlayer != null || video_url.isEmpty()) {
+        if(stepPlayer != null || step.getVideoURL().isEmpty()) {
             no_video_icon.setVisibility(View.VISIBLE);
             return;
+        } else {
+            no_video_icon.setVisibility(View.GONE);
         }
 
-        @DefaultRenderersFactory.ExtensionRendererMode int extensionRendererMode =
-                BuildConfig.FLAVOR.equals("withExtensions")
-                        ? (DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
-                        : DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF;
-        DefaultRenderersFactory renderersFactory = new DefaultRenderersFactory(context,
-                null, extensionRendererMode);
+        stepPlayer = ExoPlayerFactory.newSimpleInstance(
+                new DefaultRenderersFactory(getActivity()),
+                new DefaultTrackSelector(), new DefaultLoadControl());
 
-        TrackSelection.Factory adaptativeTrackSelectionFactory =
-                new AdaptiveTrackSelection.Factory(BANDWIDTH_METER);
-
-        trackSelector = new DefaultTrackSelector(adaptativeTrackSelectionFactory);
-        stepPlayer = ExoPlayerFactory.newSimpleInstance(renderersFactory,trackSelector);
-        stepPlayer.addListener(this);
         stepPlayerView.setPlayer(stepPlayer);
-        stepPlayer.setPlayWhenReady(autoPlay);
-        Uri uri = Uri.parse(video_url);
-        MediaSource mediaSource = new ExtractorMediaSource(uri, mediaDataSourceFactory, new DefaultExtractorsFactory(),
-                mainHandler, null);
-        if(resumePosition != C.TIME_UNSET)
-        stepPlayer.seekTo(resumePosition);
-        stepPlayer.prepare(mediaSource);
+        stepPlayer.addListener(this);
+        stepPlayer.setPlayWhenReady(playWhenReady);
+        stepPlayer.seekTo(currentWindow, playbackPosition);
 
+        Uri uri = Uri.parse(step.getVideoURL());
+        MediaSource mediaSource = buildMediaSource(uri);
+        stepPlayer.prepare(mediaSource, true, false);
+    }
+
+    private MediaSource buildMediaSource(Uri uri) {
+        return new ExtractorMediaSource(uri,
+                new DefaultHttpDataSourceFactory("ua"),
+                new DefaultExtractorsFactory(), null, null);
     }
 
 
-    private void releasePlayer(){
-        if(stepPlayer != null){
-            autoPlay = stepPlayer.getPlayWhenReady();
-            updateResumePosition();
+
+    private void releasePlayer() {
+        if (stepPlayer != null) {
+            playbackPosition = stepPlayer.getCurrentPosition();
+            currentWindow = stepPlayer.getCurrentWindowIndex();
+            playWhenReady = stepPlayer.getPlayWhenReady();
             stepPlayer.release();
             stepPlayer = null;
-            trackSelector = null;
         }
     }
 
 
-
-    private void updateResumePosition(){
-        hasResume = true;
-        resumePosition = stepPlayer.getCurrentPosition();
-    }
-
     private void refreshVideo(){
-        hasResume = false;
-        resumePosition = -1;
+        playbackPosition = 0;
         stepPlayer.seekTo(0);
         refresh_btn.setVisibility(View.GONE);
     }
